@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+
+  tweet_generator_api:
+    build: ./tweet_generator
+    container_name: tweet_generator
+    ports:
+      - "8001:8001"
+    networks:
+      - airflow_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/batch?batch_size=1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
+
+  model_api:
+    build: 
+      context: ./model_api 
+    container_name: aerostream_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+    networks:
+      - airflow_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  postgres:
+    image: postgres:13
+    container_name: aerostream_postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      # THIS LINE AUTOMATES YOUR TABLES & VIEWS
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - airflow_network
+
+  airflow-webserver:
+    build: ./airflow_streaming
+    container_name: airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./airflow_streaming/dags:/opt/airflow/dags
+      - ./airflow_streaming/logs:/opt/airflow/logs
+      - ./airflow_streaming/plugins:/opt/airflow/plugins
+    depends_on:
+      - postgres
+      - model_api
+    networks:
+      - airflow_network
+
+  airflow-scheduler:
+    build: ./airflow_streaming
+    container_name: airflow_scheduler
+    command: scheduler
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./airflow_streaming/dags:/opt/airflow/dags
+      - ./airflow_streaming/logs:/opt/airflow/logs
+      - ./airflow_streaming/plugins:/opt/airflow/plugins
+    depends_on:
+      - postgres
+    networks:
+      - airflow_network
+
+  aerostream_dashboard:
+    build: ./dashboard
+    container_name: aerostream_dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      - DB_URL=postgresql://airflow:airflow@aerostream_postgres:5432/airflow
+    volumes:
+      - ./dashboard:/app 
+    depends_on:
+      - postgres
+    networks:
+      - airflow_network  
+
+  airflow-init:
+    image: apache/airflow:2.7.1
+    container_name: airflow_init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init &&
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@aerostream.com \
+          --password admin
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    depends_on:
+      - postgres
+    networks:
+      - airflow_network
+
+networks:
+  airflow_network:
+    driver: bridge
