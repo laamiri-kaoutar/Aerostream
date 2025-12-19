@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import os
 import pandas as pd
+import plotly.express as px
 from PIL import Image
 
 st.set_page_config(page_title="Model Evaluation", layout="wide")
@@ -11,7 +12,6 @@ st.markdown("### Logistic Regression Evaluation Metrics")
 st.markdown("---")
 
 # --- Path Setup ---
-# Simple fallback logic for Docker vs Local
 ASSETS_DIR = "assets" if os.path.exists("assets") else "../assets"
 
 metrics_path = os.path.join(ASSETS_DIR, "training_metrics.json")
@@ -34,26 +34,48 @@ if os.path.exists(metrics_path):
 
     st.divider()
 
-    # 2. Per-Class Data Table
+    # 2. Detailed Analysis (Table + Graph)
     st.subheader("Detailed Class Metrics")
-    
-    # Convert JSON to DataFrame and clean it up
+
+    # Data Processing
     classes = data.get("classes", {})
-    # Filter out the summary rows
     clean_data = {k: v for k, v in classes.items() if k not in ['accuracy', 'macro avg', 'weighted avg']}
     
-    df = pd.DataFrame(clean_data).T # Transpose
-    df = df[['precision', 'recall', 'f1-score', 'support']] # Reorder
+    df = pd.DataFrame(clean_data).T
+    df = df[['precision', 'recall', 'f1-score', 'support']]
     
-    # Display with simple highlighting
-    st.dataframe(
-        df.style.highlight_max(axis=0, color='#e6e6e6').format("{:.2f}"),
-        use_container_width=True
-    )
+    # Layout: Table on Left, Graph on Right
+    c_table, c_graph = st.columns([1, 1])
+
+    with c_table:
+        st.markdown("**Metric Values**")
+        st.dataframe(
+            df.style.highlight_max(axis=0, color='#e6e6e6').format("{:.2f}"),
+            use_container_width=True
+        )
+
+    with c_graph:
+        st.markdown("**Metric Comparison**")
+        # Transform data for plotting
+        df_plot = df.reset_index().melt(id_vars='index', value_vars=['precision', 'recall', 'f1-score'])
+        df_plot.columns = ['Class', 'Metric', 'Score']
+        
+        # Create Professional Bar Chart
+        fig = px.bar(
+            df_plot, 
+            x='Class', 
+            y='Score', 
+            color='Metric', 
+            barmode='group',
+            height=300,
+            color_discrete_sequence=px.colors.qualitative.G10
+        )
+        fig.update_layout(margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig, use_container_width=True)
 
     st.divider()
 
-    # 3. Visualization Images
+    # 3. Diagnostic Images
     st.subheader("Diagnostic Plots")
     c1, c2 = st.columns(2)
     
