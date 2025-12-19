@@ -9,13 +9,12 @@ CREATE TABLE IF NOT EXISTS sentiment_results (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- FIXED VIEW: Now includes 'neutral_tweets'
 CREATE OR REPLACE VIEW airline_sentiment_kpis AS
 SELECT 
     airline,
     COUNT(*) AS total_tweets,
     SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) AS positive_tweets,
-    SUM(CASE WHEN sentiment = 'neutral' THEN 1 ELSE 0 END) AS neutral_tweets, -- <--- ADDED THIS
+    SUM(CASE WHEN sentiment = 'neutral' THEN 1 ELSE 0 END) AS neutral_tweets
     SUM(CASE WHEN sentiment = 'negative' THEN 1 ELSE 0 END) AS negative_tweets,
     ROUND(CAST(SUM(CASE WHEN sentiment = 'positive' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(*), 0) * 100, 2) AS satisfaction_score
 FROM sentiment_results
