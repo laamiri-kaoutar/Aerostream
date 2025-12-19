@@ -99,13 +99,26 @@ Aerostream/
    - **PostgreSQL:** Port `5432`
 
 ---
+## Dashboard Modules
 
-## Dashboard Features
-The Streamlit dashboard automatically updates when new data is ingested:
-- **Metrics:** Total number of tweets, percentage of negative tweets.
-- **Charts:** Bar charts for sentiment distribution per airline.
-- **Analysis:** Identification of main reasons for negative feedback.
+The Streamlit application (`http://localhost:8501`) consists of three key sections:
+
+### 1. Live Monitoring (Home)
+Connects to PostgreSQL to display real-time insights from the streaming pipeline:
+- **KPIs:** Total tweets processed, Active airlines count, Negative sentiment rate.
+- **Charts:** Interactive bar charts showing sentiment distribution per airline.
+
+### 2. Model Evaluation
+Displays offline performance metrics from the training phase (loaded from JSON artifacts):
+- **Metrics Table:** Precision, Recall, and F1-Score breakdown per class.
+- **Visualizations:** Confusion Matrix and ROC-AUC Curves.
+- **Performance:** Comparison of accuracy against the test dataset.
+
+### 3. Manual Inference
+A testing playground to validate the model in real-time:
+- **Functionality:** Sends custom text input to the Model API.
+- **Output:** Returns predicted sentiment and confidence score instantly.
 
 ---
 *Created by [Laamiri Kaoutar](https://github.com/laamiri-kaoutar)*
-```
+
