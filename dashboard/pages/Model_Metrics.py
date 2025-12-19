@@ -11,15 +11,18 @@ st.title("Model Performance Report")
 st.markdown("### Logistic Regression Evaluation Metrics")
 st.markdown("---")
 
+# --- Path Setup ---
 ASSETS_DIR = "assets" if os.path.exists("assets") else "../assets"
 metrics_path = os.path.join(ASSETS_DIR, "training_metrics.json")
 cm_path = os.path.join(ASSETS_DIR, "confusion_matrix.png")
 roc_path = os.path.join(ASSETS_DIR, "roc_curve.png")
 
+# --- Main Logic ---
 if os.path.exists(metrics_path):
     with open(metrics_path, 'r') as f:
         data = json.load(f)
 
+    # 1. Top Level KPIs
     acc = data.get("accuracy", 0)
     f1 = data.get("macro_avg_f1", 0)
     
@@ -30,35 +33,60 @@ if os.path.exists(metrics_path):
 
     st.divider()
 
-    st.subheader("Detailed Class Metrics")
+    # 2. Dual Charts (Averages vs Classes)
+    st.subheader("Performance Breakdown")
 
-    # Simplified Data Processing
-    # Convert JSON directly to DF and drop summary rows in one go
-    df = pd.DataFrame(data.get("classes", {})).T
-    df = df.drop(['accuracy', 'macro avg', 'weighted avg'], errors='ignore')
-    df = df[['precision', 'recall', 'f1-score', 'support']]
-    
-    c_table, c_graph = st.columns([1, 1])
-
-    with c_table:
-        st.caption("Metric Values")
-        st.dataframe(df.style.format("{:.2f}"), use_container_width=True)
-
-    with c_graph:
-        st.caption("Metric Comparison")
-        df_plot = df.reset_index().melt(id_vars='index', value_vars=['precision', 'recall', 'f1-score'])
+    # --- Data Processing ---
+    raw_classes = data.get("classes", {})
+    if 'accuracy' in raw_classes:
+        del raw_classes['accuracy']
         
-        fig = px.bar(
-            df_plot, 
+    df_full = pd.DataFrame(raw_classes).T
+    df_full = df_full[['precision', 'recall', 'f1-score']] # We don't need 'support' for the graph
+
+    # Split into two datasets
+    df_avgs = df_full.loc[['macro avg', 'weighted avg']]
+    df_classes = df_full.drop(['macro avg', 'weighted avg'], errors='ignore')
+
+    # Color Palette (Vibrant Pastel)
+    # Precision=Mint, Recall=Grey, F1=Coral
+    colors = ["#68D391", "#A0AEC0", "#FF8087"]
+
+    c_avg, c_class = st.columns(2)
+
+    with c_avg:
+        st.caption("Global Averages (Macro vs Weighted)")
+        # Plot Averages
+        df_plot_avg = df_avgs.reset_index().melt(id_vars='index', value_vars=['precision', 'recall', 'f1-score'])
+        
+        fig1 = px.bar(
+            df_plot_avg, 
             x='index', 
             y='value', 
             color='variable', 
             barmode='group',
             height=300,
-            color_discrete_sequence=["#68D391", "#A0AEC0", "#FF8087"]
+            color_discrete_sequence=colors
         )
-        fig.update_layout(xaxis_title=None, yaxis_title=None, legend_title=None)
-        st.plotly_chart(fig, use_container_width=True)
+        fig1.update_layout(xaxis_title=None, yaxis_title="Score", legend_title=None)
+        st.plotly_chart(fig1, use_container_width=True)
+
+    with c_class:
+        st.caption("Per-Class Performance")
+        # Plot Classes
+        df_plot_class = df_classes.reset_index().melt(id_vars='index', value_vars=['precision', 'recall', 'f1-score'])
+        
+        fig2 = px.bar(
+            df_plot_class, 
+            x='index', 
+            y='value', 
+            color='variable', 
+            barmode='group',
+            height=300,
+            color_discrete_sequence=colors
+        )
+        fig2.update_layout(xaxis_title=None, yaxis_title=None, legend_title=None)
+        st.plotly_chart(fig2, use_container_width=True)
 
     st.divider()
 
