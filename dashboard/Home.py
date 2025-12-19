@@ -63,13 +63,13 @@ while True:
                         value_name="count"
                     )
                     
-                    # RESTORED YOUR COLORS HERE
+                    # VIBRANT PASTEL PALETTE
                     fig1 = px.bar(
                         df_long, x="airline", y="count", color="sentiment",
                         color_discrete_map={
-                            "negative_tweets": "#FF6B6B",  # Your Red
-                            "neutral_tweets":  "#7D8597",  # Your Grey
-                            "positive_tweets": "#4ECDC4"   # Your Teal
+                            "negative_tweets": "#FF8087",  # Soft Coral
+                            "neutral_tweets":  "#A0AEC0",  # Cool Grey
+                            "positive_tweets": "#68D391"   # Bright Mint
                         }
                     )
                     st.plotly_chart(fig1, use_container_width=True)
@@ -77,11 +77,10 @@ while True:
             with col2:
                 st.subheader("Top Negative Drivers")
                 if not reasons.empty:
-                    # Clean text and sort
                     reasons['negative_reason'] = reasons['negative_reason'].str.title()
                     top_reasons = reasons.sort_values("reason_count", ascending=True).tail(10)
                     
-                    # RESTORED YOUR GRADIENT HERE
+                    # Soft Gradient (Light Pink to Coral)
                     fig2 = px.bar(
                         top_reasons, 
                         x="reason_count", 
@@ -89,7 +88,7 @@ while True:
                         orientation="h",
                         text_auto=True,
                         color="reason_count",
-                        color_continuous_scale=["#ffacac", "#FF6B6B"]
+                        color_continuous_scale=["#FFE3E3", "#FF8087"] 
                     )
                     fig2.update_layout(xaxis_title=None, yaxis_title=None, coloraxis_showscale=False)
                     st.plotly_chart(fig2, use_container_width=True)
